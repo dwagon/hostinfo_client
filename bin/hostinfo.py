@@ -172,37 +172,27 @@ def DisplayShowall(matches, args):
     """
     outputs = []
     for host in matches:
-        outputs.append(gen_host(host))
+        outputs.append(gen_host(host, args))
     return "\n".join(outputs)
 
 
 ###########################################################################
-def gen_host(host):
+def gen_host(host, args):
     outstr = ""
     output = []
-
-    # Get all the keyvalues for this host
-    for k in kvs:
-        if k.hostid_id != host:
-            continue
-        keyname = revcache[k.keyid_id]
-        if keyname not in keyvals:
-            keyvals[keyname] = []
-        keyvals[keyname].append(k.value)
-        keyorig[keyname] = k.origin
-        keyctime[keyname] = k.createdate
-        keymtime[keyname] = k.modifieddate
+    data = getHost(host['hostname'], origin=args.origin, times=args.times)
 
     # Generate the output string for each key/value pair
-    for key, values in keyvals.items():
-        values.sort()
+    for key in sorted(data['keyvalues'].keys()):
+        dkk = data['keyvalues'][key]
+        values = sorted([v['value'] for v in dkk])
         if args.origin:
-            originstr = "\t[Origin: %s]" % keyorig[key]
+            originstr = "\t[Origin: %s]" % dkk['origin']
         else:
             originstr = ""
 
         if args.times:
-            timestr = "\t[Created: %s Modified: %s]" % (keyctime[key], keymtime[key])
+            timestr = "\t[Created: %s Modified: %s]" % (dkk['createdate'], dkk['modifieddate'])
         else:
             timestr = ""
         output.append("    %s: %-15s%s%s" % (key, args.sep[0].join(values), originstr, timestr))
@@ -210,22 +200,31 @@ def gen_host(host):
 
     # Generate the output for the hostname
     if args.origin:
-        originstr = "\t[Origin: %s]" % _hostcache[host].origin
+        originstr = "\t[Origin: %s]" % data['origin']
     else:
         originstr = ""
     if args.times:
-        timestr = "\t[Created: %s Modified: %s]" % (_hostcache[host].createdate, _hostcache[host].modifieddate)
+        timestr = "\t[Created: %s Modified: %s]" % (data['createdate'], data['modifieddate'])
     else:
         timestr = ""
 
     # Output the pregenerated output
-    output.insert(0, "%s%s%s" % (_hostcache[host].hostname, originstr, timestr))
+    output.insert(0, "%s%s%s" % (host['hostname'], originstr, timestr))
 
     if args.aliases:
-        output.insert(0, "    [Aliases: %s]" % (", ".join(getAliases(_hostcache[host].hostname))))
+        output.insert(0, "    [Aliases: %s]" % (", ".join(getAliases(host['hostname'], args))))
 
     outstr += "\n".join(output)
     return outstr
+
+
+###########################################################################
+def getAliases(hostname, args):
+    """ Return a list of the aliases that host has """
+    url = 'host/{}/alias'.format(hostname)
+    data = hostinfo_get(url)
+    aliases = [_['alias'] for _ in data['aliases']]
+    return aliases
 
 
 ###########################################################################

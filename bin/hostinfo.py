@@ -17,14 +17,11 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
-import requests
 import sys
 import time
 
 from collections import defaultdict
-
-hostinfourl = 'http://hostinfo'
-hostinfourl = 'http://localhost:8000'
+from hostinfo_client import hostinfo_get
 
 
 ###############################################################################
@@ -299,7 +296,7 @@ def DisplayXML(matches, args):
 
 ###########################################################################
 def DisplayJson(matches, args):
-    """Display hosts and other printables in JSON format
+    """ Display hosts and other printables in JSON format
     """
     import json
     if args.showall:
@@ -307,8 +304,6 @@ def DisplayJson(matches, args):
         columns.sort()
     else:
         columns = printout[:]
-
-    cache = loadPrintoutCache(columns, matches)
 
     data = {}
     for host in matches:
@@ -395,16 +390,6 @@ def DisplayNormal(matches, args):
 
 
 ##############################################################################
-def hostinfo_get(url=None, payload={}):
-    hi_url = '%s/api/%s' % (hostinfourl, url)
-    r = requests.get(hi_url, params=payload)
-    if r.status_code != 200:
-        sys.stderr.write("Failed to get %s (%s)\n" % (url, r.status_code))
-        return None
-    return r.json()
-
-
-##############################################################################
 def getHost(hostname, origin, times):
     url = 'host/{}'.format(hostname)
     options = {'origin': origin, 'dates': times}
@@ -414,7 +399,6 @@ def getHost(hostname, origin, times):
 
 ##############################################################################
 def main():
-    global _hostcache
     args = parse_args()
     if args.host:
         data = hostinfo_get('host/{}'.format(args.host[0]))

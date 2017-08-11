@@ -20,30 +20,7 @@
 import argparse
 import sys
 
-import requests
-
-hostinfourl = 'http://hostinfo'
-hostinfourl = 'http://localhost:8000'
-
-
-##############################################################################
-def hostinfo_get(url=None, payload={}):
-    hi_url = '%s/api/%s' % (hostinfourl, url)
-    r = requests.get(hi_url, params=payload)
-    if r.status_code != 200:
-        sys.stderr.write("Failed to get %s (%s)\n" % (url, r.status_code))
-        return None
-    return r.json()
-
-
-##############################################################################
-def hostinfo_delete(url=None):
-    hi_url = '%s/api/%s' % (hostinfourl, url)
-    r = requests.delete(hi_url)
-    if r.status_code != 200:
-        sys.stderr.write("Failed to delete %s (%s)\n" % (url, r.status_code))
-        return None
-    return r.json()
+from hostinfo_client import hostinfo_get, hostinfo_delete
 
 
 ###########################################################################
@@ -74,7 +51,7 @@ def main():
         return(0)
 
     data = hostinfo_delete('host/{}'.format(host))
-    return 0
+    return(0)
 
 
 ###############################################################################

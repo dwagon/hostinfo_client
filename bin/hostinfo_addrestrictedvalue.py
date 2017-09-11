@@ -1,7 +1,8 @@
 #!/usr/bin/env python
+#
 # Written by Dougal Scott <dougal.scott@gmail.com>
 #
-#    Copyright (C) 2017 Dougal Scott
+#    Copyright (C) 2014 Dougal Scott
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -15,40 +16,38 @@
 #
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-# Script to list the legal values of a restricted key
 
-import argparse
+import re
 import sys
+import argparse
 
-from hostinfo_client import hostinfo_get
+from hostinfo_client import hostinfo_post
 
 
-###############################################################################
+##############################################################################
 def parse_args():
-    description = 'List all allowable values of a restricted key'
+    description = 'Add a new allowable value to a restricted key'
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('key', help='Name of the key to list')
+    parser.add_argument('keyvalue', help='Name of the key/value pair to allow (key=value)')
     args = parser.parse_args()
     return args
 
 
-###############################################################################
+##############################################################################
 def main():
     args = parse_args()
-    key = args.key.lower()
-    ans = hostinfo_get('rval/{}/'.format(key))
-    if ans is None:
-        sys.stderr.write('No key {} found\n'.format(key))
-        return 1
-    vals = [x['value'] for x in ans['restricted']]
-
-    print "\n".join(sorted(vals))
+    m = re.match("(?P<key>\w+)=(?P<value>.+)", args.keyvalue)
+    if not m:
+        sys.stderr.write("Must be specified in key=value format\n")
+        sys.exit(1)
+    key = m.group('key').lower()
+    value = m.group('value').lower()
+    hostinfo_post('rval/{}/{}'.format(key, value))
     return 0
 
 
-###############################################################################
+##############################################################################
 if __name__ == "__main__":
     sys.exit(main())
-
 
 # EOF

@@ -25,7 +25,7 @@ from hostinfo_client import hostinfo_post, get_origin
 
 
 ###############################################################################
-def parse_args():
+def parse_args(argv):
     description = 'Add a value to a hosts key'
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('-o', '--origin', help='The origin of this data', default=None)
@@ -34,13 +34,13 @@ def parse_args():
     parser.add_argument('--readonlyupdate', help='Write to a readonly key', action='store_true')
     parser.add_argument('keyvalue', help='Name of the key/value pair to add (key=value)')
     parser.add_argument('host', help='Host(s) to add this value to', nargs='+')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     return args
 
 
 ###########################################################################
-def main():
-    args = parse_args()
+def main(argv):
+    args = parse_args(argv)
     data = {'nohost': True, 'norigin': True}
     m = re.match("(?P<key>\w+)=(?P<value>.+)", args.keyvalue)
     if not m:
@@ -61,12 +61,11 @@ def main():
         if not ans['status'].startswith('2'):
             print(ans['error'])
             return 1
-        print(ans['result'], ans['status'])
     return 0
 
 
 ##############################################################################
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
 
 # EOF

@@ -2,6 +2,8 @@
 
 import unittest
 import responses
+import json
+
 from hostinfo_client import hostinfourl
 
 from bin import hostinfo_addvalue
@@ -41,6 +43,21 @@ class TestHostinfo(unittest.TestCase):
         rc = hostinfo_addvalue.main(['--readonlyupdate', 'keyc=foo', 'hosta'])
         self.assertEqual(rc, 0)
         self.assertEqual(len(responses.calls), 1)
+        reqdata = json.loads(responses.calls[0].request.body)
+        self.assertEqual(reqdata['readonly'], True)
+
+    @responses.activate
+    def test_origin_update(self):
+        responses.add(
+            responses.POST, "{}/api/host/hosta/key/keyc/foo".format(hostinfourl),
+            json={'status': '200', 'result': 'ok'},
+            status=200
+            )
+        rc = hostinfo_addvalue.main(['--origin', 'testorigin', '--update', 'keyc=foo', 'hosta'])
+        reqdata = json.loads(responses.calls[0].request.body)
+        self.assertEqual(reqdata['origin'], 'testorigin')
+        self.assertEqual(reqdata['update'], True)
+        self.assertEqual(rc, 0)
 
 
 ##############################################################################

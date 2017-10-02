@@ -25,7 +25,7 @@ from hostinfo_client import hostinfo_get
 
 
 ###############################################################################
-def parse_args():
+def parse_args(argv):
     description = 'Retrieve details from hostinfo database'
     epilog = """
      Criteria:
@@ -83,16 +83,8 @@ def parse_args():
         help="Print values of key for matching hosts", action='append',
         dest='printout', default=[])
     parser.add_argument('criteria', nargs='*')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     return args
-
-
-###########################################################################
-def getHostCache(matches):
-    c = {}
-    for h in Host.objects.filter(id__in=matches):
-        c[h.id] = h
-    return c
 
 
 ###########################################################################
@@ -359,7 +351,7 @@ def DisplayNormal(matches, args):
     for host in matches:
         output = "%s\t" % host['hostname']
         if args.printout or args.origin or args.times:
-            data = getHost(host['hostname'], origin=args.origin, times=args.times)
+            data = getHost(host['hostname'], origin=args.origin, times=args.times, keys=args.printout)
 
         # Generate the output for the hostname
         if args.origin:
@@ -390,16 +382,16 @@ def DisplayNormal(matches, args):
 
 
 ##############################################################################
-def getHost(hostname, origin, times):
-    url = 'host/{}'.format(hostname)
-    options = {'origin': origin, 'dates': times}
-    data = hostinfo_get(url, payload=options)
+def getHost(hostname, origin, times, keys=['*']):
+    url = 'host/{}/'.format(hostname)
+    options = {'show_origin': origin, 'show_dates': times, 'keys': keys}
+    data = hostinfo_get(url, params=options)
     return data['host']
 
 
 ##############################################################################
-def main():
-    args = parse_args()
+def main(argv):
+    args = parse_args(argv)
     if args.host:
         data = hostinfo_get('host/{}'.format(args.host[0]))
         data['hosts'] = data['host']
@@ -414,12 +406,12 @@ def main():
         retval = 0
     else:
         retval = 1
-    print("{}".format(output))
+    sys.stdout.write("{}".format(output))
     return retval
 
 
 ##############################################################################
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
 
 # EOF

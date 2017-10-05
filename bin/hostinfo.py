@@ -18,9 +18,7 @@
 
 import argparse
 import sys
-import time
 
-from collections import defaultdict
 from hostinfo_client import hostinfo_get
 
 
@@ -111,7 +109,7 @@ def Display(matches, args):
 def DisplayCount(matches, args):
     """ Display a count of matching hosts
     """
-    return "%s" % len(matches)
+    return "{}".format(len(matches))
 
 
 ###########################################################################
@@ -119,40 +117,41 @@ def DisplayValuereport(matches, args):
     """ Display a report about the values a key has and how many hosts have
     that particular value
     """
-    # TODO: Migrate to using calcKeylistVals
-    outstr = ""
-    values = defaultdict(int)
-    hostids = set()   # hostids that match the criteria
-    key = getAK(args.valuereport[0])
-    total = len(matches)
-    if total == 0:
-        return ""
-    nummatch = 0
-    kvlist = KeyValue.objects.filter(
-        keyid__key=args.valuereport[0]).values_list('hostid', 'value', 'numvalue')
-
-    for hostid, value, numvalue in kvlist:
-        hostids.add(hostid)
-        if key.numericFlag and numvalue is not None:
-            values[numvalue] += 1
-        else:
-            values[value] += 1
-    nummatch = len(hostids)     # Number of hosts that match
-    numundef = total-len(hostids)
-
-    tmpvalues = []
-    for k, v in values.items():
-        p = 100.0*v/nummatch
-        tmpvalues.append((k, v, p))
-
-    tmpvalues.sort()
-
-    outstr += "%s set: %d %0.2f%%\n" % (args.valuereport[0], nummatch, 100.0 * nummatch / total)
-    outstr += "%s unset: %d %0.2f%%\n" % (args.valuereport[0], numundef, 100.0 * numundef / total)
-    outstr += "\n"
-    for k, v, p in tmpvalues:
-        outstr += "%s %d %0.2f%%\n" % (k, v, p)
-    return outstr
+#   from collections import defaultdict
+#    # TODO: Migrate to using calcKeylistVals
+#    outstr = ""
+#    values = defaultdict(int)
+#    hostids = set()   # hostids that match the criteria
+#    key = getAK(args.valuereport[0])
+#    total = len(matches)
+#    if total == 0:
+#        return ""
+#    nummatch = 0
+#    kvlist = KeyValue.objects.filter(
+#        keyid__key=args.valuereport[0]).values_list('hostid', 'value', 'numvalue')
+#
+#    for hostid, value, numvalue in kvlist:
+#        hostids.add(hostid)
+#        if key.numericFlag and numvalue is not None:
+#            values[numvalue] += 1
+#        else:
+#            values[value] += 1
+#    nummatch = len(hostids)     # Number of hosts that match
+#    numundef = total-len(hostids)
+#
+#    tmpvalues = []
+#    for k, v in values.items():
+#        p = 100.0*v/nummatch
+#        tmpvalues.append((k, v, p))
+#
+#    tmpvalues.sort()
+#
+#    outstr += "%s set: %d %0.2f%%\n" % (args.valuereport[0], nummatch, 100.0 * nummatch / total)
+#    outstr += "%s unset: %d %0.2f%%\n" % (args.valuereport[0], numundef, 100.0 * numundef / total)
+#    outstr += "\n"
+#    for k, v, p in tmpvalues:
+#        outstr += "%s %d %0.2f%%\n" % (k, v, p)
+#    return outstr
 
 
 ###########################################################################
@@ -176,12 +175,12 @@ def gen_host(host, args):
         dkk = data['keyvalues'][key]
         values = sorted([v['value'] for v in dkk])
         if args.origin:
-            originstr = "\t[Origin: %s]" % dkk['origin']
+            originstr = "\t[Origin: {}]".format(dkk['origin'])
         else:
             originstr = ""
 
         if args.times:
-            timestr = "\t[Created: %s Modified: %s]" % (dkk['createdate'], dkk['modifieddate'])
+            timestr = "\t[Created: {} Modified: {}]".format(dkk['createdate'], dkk['modifieddate'])
         else:
             timestr = ""
         output.append("    %s: %-15s%s%s" % (key, args.sep[0].join(values), originstr, timestr))
@@ -189,7 +188,7 @@ def gen_host(host, args):
 
     # Generate the output for the hostname
     if args.origin:
-        originstr = "\t[Origin: %s]" % data['origin']
+        originstr = "\t[Origin: {}]".format(data['origin'])
     else:
         originstr = ""
     if args.times:
@@ -220,126 +219,127 @@ def getAliases(hostname, args):
 def DisplayXML(matches, args):
     """Display hosts and other printables in XML format
     """
-    from xml.sax.saxutils import escape, quoteattr
-    outstr = ""
-
-    if args.showall:
-        columns = [k.key for k in AllowedKey.objects.all()]
-        columns.sort()
-    else:
-        columns = printout[:]
-
-    outstr += "<hostinfo>\n"
-    outstr += '  <query date="%s">%s</query>\n' % (time.ctime(), escape(" ".join(sys.argv)))
-    for key in columns:
-        k = getAK(key)
-        outstr += "  <key>\n"
-        outstr += "    <name>%s</name>\n" % escape(key)
-        outstr += "    <type>%s</type>\n" % k.get_validtype_display()
-        outstr += "    <readonlyFlag>%s</readonlyFlag>\n" % k.readonlyFlag
-        outstr += "    <auditFlag>%s</auditFlag>\n" % k.auditFlag
-        outstr += "    <numericFlag>%s</numericFlag>\n" % k.numericFlag
-        outstr += "    <docpage>%s</docpage>\n" % k.docpage
-        outstr += "    <desc>%s</desc>\n" % k.desc
-        if k.restrictedFlag:
-            outstr += "    <restricted>\n"
-            rvlist = RestrictedValue.objects.filter(keyid__key=key)
-            for rv in rvlist:
-                outstr += "        <value>%s</value>\n" % escape(rv.value)
-            outstr += "    </restricted>\n"
-        outstr += "  </key>\n"
-
-    for host in matches:
-        if args.aliases:
-            aliaslist = getAliases(_hostcache[host].hostname)
-        if args.origin:
-            hostorigin = ' origin="%s" ' % _hostcache[host].origin
-        else:
-            hostorigin = ''
-        if args.times:
-            hostdates = ' modified="%s" created="%s" ' % (_hostcache[host].modifieddate, _hostcache[host].createdate)
-        else:
-            hostdates = ''
-        outstr += '  <host docpage="%s" %s%s>\n' % (_hostcache[host].docpage, hostorigin, hostdates)
-        outstr += "    <hostname>%s</hostname>\n" % escape(_hostcache[host].hostname)
-        if args.aliases and aliaslist:
-            outstr += "    <aliaslist>\n"
-            for alias in aliaslist:
-                outstr += "      <alias>%s</alias>\n" % escape(alias)
-            outstr += "    </aliaslist>\n"
-        outstr += "    <data>\n"
-        for p in columns:
-            if host not in cache[p] or len(cache[p][host]) == 0:
-                pass
-            else:
-                for c in cache[p][host]:
-                    outstr += '      <confitem key="%s"' % p
-                    if args.origin:
-                        outstr += ' origin=%s' % quoteattr(c['origin'])
-                    if args.times:
-                        outstr += ' modified="%s" created="%s"' % (c['modifieddate'], c['createdate'])
-                    outstr += '>%s</confitem>\n' % escape(c['value'])
-
-        outstr += "    </data>\n"
-        outstr += "  </host>\n"
-    outstr += "</hostinfo>\n"
-    return outstr
+#    from xml.sax.saxutils import escape, quoteattr
+#   import time
+#    outstr = ""
+#
+#    if args.showall:
+#        columns = [k.key for k in AllowedKey.objects.all()]
+#        columns.sort()
+#    else:
+#        columns = printout[:]
+#
+#    outstr += "<hostinfo>\n"
+#    outstr += '  <query date="%s">%s</query>\n' % (time.ctime(), escape(" ".join(sys.argv)))
+#    for key in columns:
+#        k = getAK(key)
+#        outstr += "  <key>\n"
+#        outstr += "    <name>%s</name>\n" % escape(key)
+#        outstr += "    <type>%s</type>\n" % k.get_validtype_display()
+#        outstr += "    <readonlyFlag>%s</readonlyFlag>\n" % k.readonlyFlag
+#        outstr += "    <auditFlag>%s</auditFlag>\n" % k.auditFlag
+#        outstr += "    <numericFlag>%s</numericFlag>\n" % k.numericFlag
+#        outstr += "    <docpage>%s</docpage>\n" % k.docpage
+#        outstr += "    <desc>%s</desc>\n" % k.desc
+#        if k.restrictedFlag:
+#            outstr += "    <restricted>\n"
+#            rvlist = RestrictedValue.objects.filter(keyid__key=key)
+#            for rv in rvlist:
+#                outstr += "        <value>%s</value>\n" % escape(rv.value)
+#            outstr += "    </restricted>\n"
+#        outstr += "  </key>\n"
+#
+#    for host in matches:
+#        if args.aliases:
+#            aliaslist = getAliases(_hostcache[host].hostname)
+#        if args.origin:
+#            hostorigin = ' origin="%s" ' % _hostcache[host].origin
+#        else:
+#            hostorigin = ''
+#        if args.times:
+#            hostdates = ' modified="%s" created="%s" ' % (_hostcache[host].modifieddate, _hostcache[host].createdate)
+#        else:
+#            hostdates = ''
+#        outstr += '  <host docpage="%s" %s%s>\n' % (_hostcache[host].docpage, hostorigin, hostdates)
+#        outstr += "    <hostname>%s</hostname>\n" % escape(_hostcache[host].hostname)
+#        if args.aliases and aliaslist:
+#            outstr += "    <aliaslist>\n"
+#            for alias in aliaslist:
+#                outstr += "      <alias>%s</alias>\n" % escape(alias)
+#            outstr += "    </aliaslist>\n"
+#        outstr += "    <data>\n"
+#        for p in columns:
+#            if host not in cache[p] or len(cache[p][host]) == 0:
+#                pass
+#            else:
+#                for c in cache[p][host]:
+#                    outstr += '      <confitem key="%s"' % p
+#                    if args.origin:
+#                        outstr += ' origin=%s' % quoteattr(c['origin'])
+#                    if args.times:
+#                        outstr += ' modified="%s" created="%s"' % (c['modifieddate'], c['createdate'])
+#                    outstr += '>%s</confitem>\n' % escape(c['value'])
+#
+#        outstr += "    </data>\n"
+#        outstr += "  </host>\n"
+#    outstr += "</hostinfo>\n"
+#    return outstr
 
 
 ###########################################################################
 def DisplayJson(matches, args):
     """ Display hosts and other printables in JSON format
     """
-    import json
-    if args.showall:
-        columns = [k.key for k in AllowedKey.objects.all()]
-        columns.sort()
-    else:
-        columns = printout[:]
-
-    data = {}
-    for host in matches:
-        hname = _hostcache[host].hostname
-        data[hname] = {}
-        for p in columns:
-            if host not in cache[p] or len(cache[p][host]) == 0:
-                pass
-            else:
-                data[hname][p] = []
-                for c in cache[p][host]:
-                    data[hname][p].append(c['value'])
-
-    return json.dumps(data)
+#    import json
+#    if args.showall:
+#        columns = [k.key for k in AllowedKey.objects.all()]
+#        columns.sort()
+#    else:
+#        columns = printout[:]
+#
+#    data = {}
+#    for host in matches:
+#        hname = _hostcache[host].hostname
+#        data[hname] = {}
+#        for p in columns:
+#            if host not in cache[p] or len(cache[p][host]) == 0:
+#                pass
+#            else:
+#                data[hname][p] = []
+#                for c in cache[p][host]:
+#                    data[hname][p].append(c['value'])
+#
+#    return json.dumps(data)
 
 
 ###########################################################################
 def DisplayCSV(matches, args):
     """Display hosts and other printables in CSV format
     """
-    output = []
-    if args.showall:
-        columns = [k.key for k in AllowedKey.objects.all()]
-        columns.sort()
-    else:
-        columns = printout[:]
-
-    cache = loadPrintoutCache(columns, matches)
-
-    if args.header:
-        output.append("hostname%s%s" % (args.sep[0], args.sep[0].join(columns)))
-
-    for host in matches:
-        outline = "%s" % _hostcache[host].hostname
-        for p in columns:
-            outline += args.sep[0]
-            if host not in cache[p] or len(cache[p][host]) == 0:
-                pass
-            else:
-                vals = sorted(cache[p][host], key=lambda x: x['value'])
-                outline += '"%s"' % (args.sep[0].join([c['value'] for c in vals]))
-
-        output.append(outline)
-    return "\n".join(output)
+#    output = []
+#    if args.showall:
+#        columns = [k.key for k in AllowedKey.objects.all()]
+#        columns.sort()
+#    else:
+#        columns = printout[:]
+#
+#    cache = loadPrintoutCache(columns, matches)
+#
+#    if args.header:
+#        output.append("hostname%s%s" % (args.sep[0], args.sep[0].join(columns)))
+#
+#    for host in matches:
+#        outline = "%s" % _hostcache[host].hostname
+#        for p in columns:
+#            outline += args.sep[0]
+#            if host not in cache[p] or len(cache[p][host]) == 0:
+#                pass
+#            else:
+#                vals = sorted(cache[p][host], key=lambda x: x['value'])
+#                outline += '"%s"' % (args.sep[0].join([c['value'] for c in vals]))
+#
+#        output.append(outline)
+#    return "\n".join(output)
 
 
 ###########################################################################
@@ -349,15 +349,17 @@ def DisplayNormal(matches, args):
     outstr = ""
 
     for host in matches:
-        output = "%s\t" % host['hostname']
+        output = "{}\t".format(host['hostname'])
+        if args.aliases:
+            output += "[Aliases: {}]".format(", ".join(getAliases(host['hostname'], args)))
         if args.printout or args.origin or args.times:
             data = getHost(host['hostname'], origin=args.origin, times=args.times, keys=args.printout)
 
         # Generate the output for the hostname
         if args.origin:
-            output += "[Origin: %s]\t" % data['origin']
+            output += "[Origin: {}]\t".format(data['origin'])
         if args.times:
-            output += "[Created: %s Modified: %s]\t" % (data['createdate'], data['modifieddate'])
+            output += "[Created: {} Modified: {}]\t".format(data['createdate'], data['modifieddate'])
 
         for p in args.printout:
             val = ""
@@ -367,17 +369,17 @@ def DisplayNormal(matches, args):
                 output += ""
             else:
                 for kv in sorted(kvs, key=lambda x: x['value']):
-                    val += "%s" % kv['value']
+                    val += kv['value']
                     if args.origin:
                         val += "[Origin: %s]" % kv['origin']
                     if args.times:
-                        val += "[Created: %s, Modified: %s]" % (kv['createdate'], kv['modifieddate'])
+                        val += "[Created: {}, Modified: {}]".format(kv['createdate'], kv['modifieddate'])
                     val += args.sep[0]
-                output += "%s=%s\t" % (p, val[:-1])
+                output += "{}={}\t".format(p, val[:-1])
 
-        outstr += "%s%s" % (output.rstrip(), args.hsep[0])
+        outstr += "{}{}".format(output.rstrip(), args.hsep[0])
     if outstr and not outstr.endswith('\n'):
-        outstr = '%s%s' % (outstr[:-1], '\n')
+        outstr = '{}{}'.format(outstr[:-1], '\n')
     return outstr
 
 

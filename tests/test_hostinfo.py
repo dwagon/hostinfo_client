@@ -182,6 +182,59 @@ class TestHostinfo(unittest.TestCase):
         self.assertIn("keyname: bar,foo", output)
         self.assertIn("nother: baz", output)
 
+    ##########################################################################
+    @responses.activate
+    def test_csv(self):
+        """ Test calling hostinfo CSV with no arguments """
+        responses.add(
+            responses.GET, "{}/api/query/beef.hostre".format(hostinfourl),
+            json={'status': '200', 'result': 'ok', 'hosts': [{'hostname': 'deadbeef'}, {'hostname': 'beeflet'}]},
+            status=200
+            )
+        rc = hostinfo.main(['--csv', 'beef.hostre'])
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses.calls), 1)
+        self.assertIn("hostname", sys.stdout.getvalue())
+        self.assertIn("deadbeef", sys.stdout.getvalue())
+        self.assertIn("beeflet", sys.stdout.getvalue())
+
+    ##########################################################################
+    @responses.activate
+    def test_print_csv(self):
+        """ Test calling hostinfo csv with printing a value """
+        responses.add(
+            responses.GET, "{}/api/query/beef.hostre".format(hostinfourl),
+            json={
+                'status': '200',
+                'result': 'ok',
+                'hosts': [
+                    {
+                        'hostname': 'deadbeef',
+                        'keyvalues': {
+                            'cow': [{'value': 'angus', 'key': 'cow'}],
+                            'name': [{'value': 'bessy', 'key': 'name'}],
+                            }
+                        },
+                    {
+                        'hostname': 'beeflet',
+                        'keyvalues': {
+                            'name': [{'value': 'daisy', 'key': 'name'}],
+                            }
+                        }
+                    ]
+                },
+            status=200
+            )
+        rc = hostinfo.main(['--csv', '-p', 'cow', 'beef.hostre'])
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses.calls), 1)
+        output = sys.stdout.getvalue()
+        self.assertIn('hostname,cow', output)
+        self.assertIn('deadbeef,"angus"', output)
+        self.assertIn('beeflet,""', output)
+        self.assertNotIn('bessy', output)
+
+
 ##############################################################################
 if __name__ == "__main__":
     unittest.main()

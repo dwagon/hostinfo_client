@@ -316,30 +316,31 @@ def DisplayJson(matches, args):
 def DisplayCSV(matches, args):
     """Display hosts and other printables in CSV format
     """
-#    output = []
-#    if args.showall:
-#        columns = [k.key for k in AllowedKey.objects.all()]
-#        columns.sort()
-#    else:
-#        columns = printout[:]
-#
-#    cache = loadPrintoutCache(columns, matches)
-#
-#    if args.header:
-#        output.append("hostname%s%s" % (args.sep[0], args.sep[0].join(columns)))
-#
-#    for host in matches:
-#        outline = "%s" % _hostcache[host].hostname
-#        for p in columns:
-#            outline += args.sep[0]
-#            if host not in cache[p] or len(cache[p][host]) == 0:
-#                pass
-#            else:
-#                vals = sorted(cache[p][host], key=lambda x: x['value'])
-#                outline += '"%s"' % (args.sep[0].join([c['value'] for c in vals]))
-#
-#        output.append(outline)
-#    return "\n".join(output)
+    output = []
+    if args.showall:
+        columns = []
+        data = hostinfo_get('key')
+        for k in data['keys']:
+            columns.append(k['key'])
+        columns.sort()
+    else:
+        columns = args.printout[:]
+
+    if args.header:
+        output.append("hostname{}{}".format(args.sep[0], args.sep[0].join(columns)))
+
+    for host in matches:
+        outline = "{}".format(host['hostname'])
+        for p in columns:
+            outline += args.sep[0]
+            if p in host['keyvalues']:
+                vals = sorted(host['keyvalues'][p], key=lambda x: x['value'])
+            else:
+                vals = ''
+            outline += '"{}"'.format(args.sep[0].join([c['value'] for c in vals]))
+
+        output.append(outline)
+    return "{}\n".format("\n".join(output))
 
 
 ###########################################################################
@@ -384,9 +385,13 @@ def DisplayNormal(matches, args):
 
 
 ##############################################################################
-def getHost(hostname, origin, times, keys=['*']):
+def getHost(hostname, origin=False, times=False, keys=['*']):
     url = 'host/{}/'.format(hostname)
-    options = {'show_origin': origin, 'show_dates': times, 'keys': keys}
+    options = {'keys': keys}
+    if times:
+        options['show_dates'] = times
+    if origin:
+        options['show_origin'] = origin
     data = hostinfo_get(url, params=options)
     return data['host']
 

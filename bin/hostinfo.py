@@ -109,7 +109,7 @@ def Display(matches, args):
 def DisplayCount(matches, args):
     """ Display a count of matching hosts
     """
-    return "{}".format(len(matches))
+    return "{}\n".format(len(matches))
 
 
 ###########################################################################

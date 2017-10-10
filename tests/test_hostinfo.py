@@ -184,6 +184,20 @@ class TestHostinfo(unittest.TestCase):
 
     ##########################################################################
     @responses.activate
+    def test_count(self):
+        """ Test calling hostinfo with count"""
+        responses.add(
+            responses.GET, "{}/api/query/beef.hostre".format(hostinfourl),
+            json={'status': '200', 'result': 'ok', 'hosts': [{'hostname': 'deadbeef'}, {'hostname': 'beeflet'}]},
+            status=200
+            )
+        rc = hostinfo.main(['--count', 'beef.hostre'])
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses.calls), 1)
+        self.assertEqual("2\n", sys.stdout.getvalue())
+
+    ##########################################################################
+    @responses.activate
     def test_csv(self):
         """ Test calling hostinfo CSV with no arguments """
         responses.add(

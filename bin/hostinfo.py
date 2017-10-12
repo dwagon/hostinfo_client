@@ -117,41 +117,39 @@ def DisplayValuereport(matches, args):
     """ Display a report about the values a key has and how many hosts have
     that particular value
     """
-#   from collections import defaultdict
-#    # TODO: Migrate to using calcKeylistVals
-#    outstr = ""
-#    values = defaultdict(int)
-#    hostids = set()   # hostids that match the criteria
-#    key = getAK(args.valuereport[0])
-#    total = len(matches)
-#    if total == 0:
-#        return ""
-#    nummatch = 0
-#    kvlist = KeyValue.objects.filter(
-#        keyid__key=args.valuereport[0]).values_list('hostid', 'value', 'numvalue')
-#
-#    for hostid, value, numvalue in kvlist:
-#        hostids.add(hostid)
-#        if key.numericFlag and numvalue is not None:
-#            values[numvalue] += 1
-#        else:
-#            values[value] += 1
-#    nummatch = len(hostids)     # Number of hosts that match
-#    numundef = total-len(hostids)
-#
-#    tmpvalues = []
-#    for k, v in values.items():
-#        p = 100.0*v/nummatch
-#        tmpvalues.append((k, v, p))
-#
-#    tmpvalues.sort()
-#
-#    outstr += "%s set: %d %0.2f%%\n" % (args.valuereport[0], nummatch, 100.0 * nummatch / total)
-#    outstr += "%s unset: %d %0.2f%%\n" % (args.valuereport[0], numundef, 100.0 * numundef / total)
-#    outstr += "\n"
-#    for k, v, p in tmpvalues:
-#        outstr += "%s %d %0.2f%%\n" % (k, v, p)
-#    return outstr
+    from collections import defaultdict
+    valkey = args.valuereport[0]
+    outstr = ""
+    values = defaultdict(int)
+    total = len(matches)
+    numdef = 0
+    if total == 0:
+        return ""
+    for host in matches:
+        has_val = False
+        for key in host['keyvalues']:
+            if key != valkey:
+                continue
+            has_val = True
+            for val in [v['value'] for v in host['keyvalues'][key]]:
+                values[val] += 1
+        if has_val:
+            numdef += 1
+    numundef = total - numdef
+
+    tmpvalues = []
+    for k, v in values.items():
+        p = 100.0 * v / numdef
+        tmpvalues.append((k, v, p))
+
+    tmpvalues.sort()
+
+    outstr += "{} set: {} {:.2f}%\n".format(valkey, numdef, 100.0 * numdef / total)
+    outstr += "{} unset: {} {:.2f}%\n".format(valkey, numundef, 100.0 * numundef / total)
+    outstr += "\n"
+    for k, v, p in tmpvalues:
+        outstr += "{} {} {:.2f}%\n".format(k, v, p)
+    return outstr
 
 
 ###########################################################################

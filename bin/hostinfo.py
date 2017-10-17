@@ -159,7 +159,7 @@ def DisplayShowall(matches, args):
     outputs = []
     for host in matches:
         outputs.append(gen_host(host, args))
-    return "\n".join(outputs)
+    return "{}\n".format("\n".join(outputs))
 
 
 ###########################################################################
@@ -172,13 +172,14 @@ def gen_host(host, args):
     for key in sorted(data['keyvalues'].keys()):
         dkk = data['keyvalues'][key]
         values = sorted([v['value'] for v in dkk])
+        # Just display the origin and dates of the first element - otherwise it becomes stupidly messy
         if args.origin:
-            originstr = "\t[Origin: {}]".format(dkk['origin'])
+            originstr = "\t[Origin: {}]".format(dkk[0]['origin'])
         else:
             originstr = ""
 
         if args.times:
-            timestr = "\t[Created: {} Modified: {}]".format(dkk['createdate'], dkk['modifieddate'])
+            timestr = "\t[Created: {} Modified: {}]".format(dkk[0]['createdate'], dkk[0]['modifieddate'])
         else:
             timestr = ""
         output.append("    %s: %-15s%s%s" % (key, args.sep[0].join(values), originstr, timestr))

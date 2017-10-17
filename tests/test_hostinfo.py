@@ -135,7 +135,7 @@ class TestHostinfo(unittest.TestCase):
                 'host': {
                     'keyvalues': {
                         'keyname': [{'key': 'keyname', 'value': 'bar'}],
-                        'nother': [{'key': 'nother', 'value': 'baz'}]
+                        'notherkey': [{'key': 'notherkey', 'value': 'baz'}]
                         }
                     }
                 },
@@ -168,7 +168,7 @@ class TestHostinfo(unittest.TestCase):
                             {'key': 'keyname', 'value': 'foo'},
                             {'key': 'keyname', 'value': 'bar'}
                             ],
-                        'nother': [{'key': 'nother', 'value': 'baz'}]
+                        'notherkey': [{'key': 'notherkey', 'value': 'baz'}]
                         }
                     }
                 },
@@ -180,7 +180,59 @@ class TestHostinfo(unittest.TestCase):
         output = sys.stdout.getvalue()
         self.assertIn("deadbeef", output)
         self.assertIn("keyname: bar,foo", output)
-        self.assertIn("nother: baz", output)
+        self.assertIn("notherkey: baz", output)
+
+    ##########################################################################
+    @responses.activate
+    def test_showall_origin(self):
+        """ Test calling hostinfo with showall with origin times """
+        responses.add(
+            responses.GET, "{}/api/query/beef.hostre".format(hostinfourl),
+            json={
+                'status': '200',
+                'hosts': [
+                    {'hostname': 'deadbeef', 'origin': 'cuisine'}
+                    ]
+                },
+            status=200
+            )
+        responses.add(
+            responses.GET, "{}/api/host/deadbeef/".format(hostinfourl),
+            json={
+                'result': 'ok',
+                'host': {
+                        'hostname': 'deadbeef',
+                        'createdate': '2014-03-02',
+                        'modifieddate': '2015-04-03',
+                        'origin': 'cuisine',
+                        'keyvalues': {
+                            'keyname': [
+                                {'key': 'keyname', 'value': 'foo', 'origin': 'alpha', 'createdate': '2016-01-02', 'modifieddate': '2016-02-03'},
+                                {'key': 'keyname', 'value': 'bar', 'origin': 'beta', 'createdate': '2017-01-02', 'modifieddate': '2017-03-04'}
+                                ],
+                            'notherkey': [
+                                {'key': 'notherkey', 'value': 'baz', 'origin': 'gamma', 'createdate': '2011-01-02', 'modifieddate': '2011-03-04'}
+                                ]
+                            }
+                    }
+                },
+            status=200
+            )
+        rc = hostinfo.main(['--showall', '--origin', '--dates', 'beef.hostre'])
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses.calls), 2)
+        output = sys.stdout.getvalue()
+        self.assertIn("deadbeef", output)
+        for line in output:
+            if 'deadbeef' in line:
+                self.assertIn("[Origin: cuisine]", line)
+                self.assertIn("Created: 2014-03-02", line)
+            if 'keyname' in line:
+                self.assertIn("[Origin: alpha]", line)
+                self.assertIn("Created: 2017-01-02", line)
+                self.assertIn("Modified: 2017-02-03", line)
+        self.assertIn("keyname: bar,foo", output)
+        self.assertIn("notherkey: baz", output)
 
     ##########################################################################
     @responses.activate

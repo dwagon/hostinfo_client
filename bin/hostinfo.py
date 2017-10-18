@@ -289,26 +289,32 @@ def DisplayXML(matches, args):
 def DisplayJson(matches, args):
     """ Display hosts and other printables in JSON format
     """
-#    import json
-#    if args.showall:
-#        columns = [k.key for k in AllowedKey.objects.all()]
-#        columns.sort()
-#    else:
-#        columns = printout[:]
-#
-#    data = {}
-#    for host in matches:
-#        hname = _hostcache[host].hostname
-#        data[hname] = {}
-#        for p in columns:
-#            if host not in cache[p] or len(cache[p][host]) == 0:
-#                pass
-#            else:
-#                data[hname][p] = []
-#                for c in cache[p][host]:
-#                    data[hname][p].append(c['value'])
-#
-#    return json.dumps(data)
+    import json
+    if args.showall:
+        columns = []
+        data = hostinfo_get('key')
+        for k in data['keys']:
+            columns.append(k['key'])
+        columns.sort()
+    else:
+        columns = args.printout[:]
+
+    data = {}
+    for host in matches:
+        hname = host['hostname']
+        data[hname] = {}
+        for p in columns:
+            if p not in host['keyvalues']:
+                pass
+            else:
+                data[hname][p] = []
+                vals = [c['value'] for c in host['keyvalues'][p]]
+                if len(vals) == 1:
+                    data[hname][p] = vals[0]
+                else:
+                    data[hname][p] = vals
+
+    return json.dumps(data)
 
 
 ###########################################################################

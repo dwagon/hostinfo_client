@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
+import json
 import unittest
 import sys
+
 import responses
 
 from StringIO import StringIO
@@ -300,6 +302,38 @@ class TestHostinfo(unittest.TestCase):
         self.assertIn('beeflet,""', output)
         self.assertNotIn('bessy', output)
 
+    ##########################################################################
+    @responses.activate
+    def test_json(self):
+        """ Test calling hostinfo json """
+        responses.add(
+            responses.GET, "{}/api/query/beef.hostre".format(hostinfourl),
+            json={
+                'status': '200',
+                'result': 'ok',
+                'hosts': [
+                    {
+                        'hostname': 'deadbeef',
+                        'keyvalues': {
+                            'cow': [{'value': 'angus', 'key': 'cow'}],
+                            'name': [{'value': 'bessy', 'key': 'name'}],
+                            }
+                        },
+                    {
+                        'hostname': 'beeflet',
+                        'keyvalues': {
+                            'name': [{'value': 'daisy', 'key': 'name'}],
+                            }
+                        }
+                    ]
+                },
+            status=200
+            )
+        rc = hostinfo.main(['--json', '-p', 'cow', 'beef.hostre'])
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses.calls), 1)
+        output = sys.stdout.getvalue()
+        self.assertEqual(json.loads(output), {"beeflet": {}, "deadbeef": {"cow": "angus"}})
 
 ##############################################################################
 if __name__ == "__main__":

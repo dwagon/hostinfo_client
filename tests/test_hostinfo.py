@@ -305,7 +305,7 @@ class TestHostinfo(unittest.TestCase):
     ##########################################################################
     @responses.activate
     def test_json(self):
-        """ Test calling hostinfo json """
+        """ Test calling hostinfo with json output"""
         responses.add(
             responses.GET, "{}/api/query/beef.hostre".format(hostinfourl),
             json={
@@ -334,6 +334,36 @@ class TestHostinfo(unittest.TestCase):
         self.assertEqual(len(responses.calls), 1)
         output = sys.stdout.getvalue()
         self.assertEqual(json.loads(output), {"beeflet": {}, "deadbeef": {"cow": "angus"}})
+
+    ##########################################################################
+    @responses.activate
+    def test_valuereport(self):
+        """ Test calling hostinfo as a valuereport  """
+        responses.add(
+            responses.GET, "{}/api/keylist/breed/beef.hostre".format(hostinfourl),
+            json={
+                "key": "fsused",
+                "numdef": 3,
+                "numundef": 1,
+                "numvals": 3,
+                "pctdef": 75.0,
+                "pctundef": 25.0,
+                "result": "ok",
+                "total": 4,
+                "vallist": [
+                    ["angus", 2, 50.0],
+                    ["daisy", 1, 25.0],
+                    ]
+                },
+            status=200
+            )
+        rc = hostinfo.main(['--valuereport', 'breed', 'beef.hostre'])
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(responses.calls), 1)
+        output = sys.stdout.getvalue()
+        self.assertIn("breed set: 3 75.00%", output)
+        self.assertIn("breed unset: 1 25.00%", output)
+        self.assertIn("angus 2 50.00%", output)
 
 ##############################################################################
 if __name__ == "__main__":

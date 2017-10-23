@@ -117,37 +117,15 @@ def DisplayValuereport(matches, args):
     """ Display a report about the values a key has and how many hosts have
     that particular value
     """
-    from collections import defaultdict
     valkey = args.valuereport[0]
+    data = hostinfo_get('keylist/{}/{}'.format(valkey, "/".join(args.criteria)))
+
     outstr = ""
-    values = defaultdict(int)
-    total = len(matches)
-    numdef = 0
-    if total == 0:
-        return ""
-    for host in matches:
-        has_val = False
-        for key in host['keyvalues']:
-            if key != valkey:
-                continue
-            has_val = True
-            for val in [v['value'] for v in host['keyvalues'][key]]:
-                values[val] += 1
-        if has_val:
-            numdef += 1
-    numundef = total - numdef
 
-    tmpvalues = []
-    for k, v in values.items():
-        p = 100.0 * v / numdef
-        tmpvalues.append((k, v, p))
-
-    tmpvalues.sort()
-
-    outstr += "{} set: {} {:.2f}%\n".format(valkey, numdef, 100.0 * numdef / total)
-    outstr += "{} unset: {} {:.2f}%\n".format(valkey, numundef, 100.0 * numundef / total)
+    outstr += "{} set: {} {:.2f}%\n".format(valkey, data['numdef'], data['pctdef'])
+    outstr += "{} unset: {} {:.2f}%\n".format(valkey, data['numundef'], data['pctundef'])
     outstr += "\n"
-    for k, v, p in tmpvalues:
+    for k, v, p in data['vallist']:
         outstr += "{} {} {:.2f}%\n".format(k, v, p)
     return outstr
 
@@ -404,15 +382,18 @@ def getHost(hostname, origin=False, times=False, keys=['*']):
 ##############################################################################
 def main(argv):
     args = parse_args(argv)
-    if args.host:
-        data = hostinfo_get('host/{}'.format(args.host[0]))
-        data['hosts'] = data['host']
+    if args.valuereport:    # Does the query itself
+        data = {'hosts': ['dummy']}
     else:
-        if args.criteria:
-            crit = "/".join(args.criteria)
-            data = hostinfo_get('query/{}'.format(crit))
+        if args.host:
+            data = hostinfo_get('host/{}'.format(args.host[0]))
+            data['hosts'] = data['host']
         else:
-            data = hostinfo_get('host')
+            if args.criteria:
+                crit = "/".join(args.criteria)
+                data = hostinfo_get('query/{}'.format(crit))
+            else:
+                data = hostinfo_get('host')
     output = Display(data['hosts'], args)
     if len(data['hosts']):
         retval = 0
